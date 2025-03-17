@@ -1,11 +1,9 @@
----
-title: About
-description: 'Who I am'
-author: r00ta
-date: 2025-03-17T20:53:44-05:00
-draft: false
-toc: false
----
++++
+title = 'About'
+date = 2025-03-17
+draft = false
+toc = false
++++
 
 Currently a Software Engineer @ Canonical. Cycling and running lover.
 

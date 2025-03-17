@@ -28,10 +28,15 @@ defaultContentLanguage = "en-gb"
     name = 'Posts'
     url = '/posts/'
     weight = 20
+   [[Languages.en-gb.menu.main]]
+    pageRef="maas"
+    name = 'MAAS'
+    url = '/pages/maas'
+    weight = 25
   [[Languages.en-gb.menu.main]]
     pageRef="about"
     name = 'About'
-    url = '/about/'
+    url = '/pages/about'
     weight = 30
 
 [Languages.en-gb.params]
