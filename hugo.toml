@@ -1,6 +1,7 @@
 baseURL = 'https://r00ta.com/'
 languageCode = 'en-us'
 title = 'Jacopo Rota - r00ta'
+googleAnalytics = 'G-6NYNKRFNF8'
 
 # This defines how dates are formatted
 defaultContentLanguage = "en-gb"
