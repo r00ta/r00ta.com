@@ -1,38 +1,54 @@
 +++
-date = '2025-03-24T00:06:05+01:00'
-draft = false 
-title = 'Temporal server as a snap'
-toc = false
-+++
+date = '2025-03-24T00:06:05+01:00'  
+draft = false  
+title = 'Introducing Temporal Server as a Snap  '  
+toc = false  
++++  
 
-Hey everyone!
+Hello everyone,  
 
-I've been using [temporal](https://temporal.io/) is some projects up to know, but since I'm not using `docker` nor `k8s` I always find a bit annoying to run the server and configure it manually. So I decided to wrap it with a snap and provide utilities to setup it. 
+I've been using [Temporal](https://temporal.io/) in several projects, but since I don't use `docker` or `k8s` for such projects, setting up and configuring the server manually has always been a bit cumbersome. To simplify this process, I’ve packaged Temporal Server as a Snap, providing built-in utilities for easy setup and configuration.  
 
-You can download the snap from [here](https://snapcraft.io/temporal-server) and [here](https://github.com/r00ta/temporal-server-snap) you can find the repository that is crafting the snap. 
+You can download the Snap from [Snapcraft](https://snapcraft.io/temporal-server), and the source repository is available on [GitHub](https://github.com/r00ta/temporal-server-snap).  
 
-## How to install 
+## Installation  
 
-Super simple: 
+Installing the Snap is straightforward:  
+
 ```bash
 sudo snap install --channel=latest/edge temporal-server
-```
+```  
 
-## Configure
+## Configuration  
 
-You can use `postgres` or `sqlite` (more utilities will be provided in the future).
+Currently, you can use either `PostgreSQL` or `SQLite` as the database backend (additional options may be added in the future).  
 
-For `postgres` you can execute
+### PostgreSQL Configuration  
+
+Run the following command, replacing the placeholders with your database details:  
 
 ```bash
 sudo temporal-server.init-postgres --host <host> --port <port> --user <user> --password <password>
-```
+```  
 
-and for `sqlite` 
-```
-sudo temporal-server.init-sqlite 
-```
+### SQLite Configuration  
 
-and finally `sudo snap restart temporal-server` to apply the changes :) You can then customize the temporal config by editing `/var/snap/temporal-server/common/config/production.yaml` as you wish. 
+For SQLite, simply execute:  
 
-Cheers!
+```bash
+sudo temporal-server.init-sqlite
+```  
+
+After configuring the database, restart the service to apply the changes:  
+
+```bash
+sudo snap restart temporal-server
+```  
+
+You can further customize Temporal's configuration by modifying the file:  
+
+```
+/var/snap/temporal-server/common/config/production.yaml
+```  
+
+Let me know if you have any questions or suggestions. Enjoy!  
