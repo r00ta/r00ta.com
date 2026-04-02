@@ -19,7 +19,7 @@ The Snap requires PostgreSQL and Redis to be available. These can be installed a
 
 ```bash
 sudo apt install postgresql redis-server
-sudo -u postgres createuser --superuser netbox
+sudo -u postgres createuser netbox
 sudo -u postgres createdb -O netbox netbox
 ```
 
