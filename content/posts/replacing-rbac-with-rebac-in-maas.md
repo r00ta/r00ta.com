@@ -9,7 +9,7 @@ toc = true
 
 Hello everyone,
 
-In this post I want to share the work I did to bring relationship-based access control (ReBAC) to [MAAS](https://maas.io/) by embedding [OpenFGA](https://openfga.dev/) directly into the region controller. This replaces the previous permission layer based on roles (RBAC) with a much more flexible, fine-grained model powered by OpenFGA — the open-source implementation of Google's [Zanzibar](https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/) authorization system.
+In this post I want to share the work I did to bring relationship-based access control (ReBAC) to [MAAS](https://maas.io/) by embedding [OpenFGA](https://openfga.dev/) directly into the region controller. This replaces the previous permission layer based on roles (RBAC) with a much more flexible, fine-grained model powered by OpenFGA, the open-source implementation of Google's [Zanzibar](https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/) authorization system.
 
 MAAS 3.8 ships this as the built-in authorization system. The legacy Canonical RBAC integration is deprecated in 3.8 and fully removed in MAAS 4.0.
 
@@ -20,6 +20,8 @@ The old RBAC model in MAAS was built around static roles: **admin** and **user**
 - **No per-resource-pool permissions.** You were either an admin with full control or a regular user with limited global access.
 - **External dependency on Canonical RBAC.** The RBAC service was a separate product that had to be deployed and maintained alongside MAAS.
 - **Coarse-grained controls.** There was no way to say "this team can deploy machines only in pool X" without making them admins.
+
+There is a commercial product (called RBAC) developed by Canonical to implement RBAC with dedicated permissions on resource pools. This work upstream is going to replace such integration and will be free for all. 
 
 ReBAC solves all of these problems by modeling permissions as *relationships* between users, groups, and resources. The permission model becomes:
 
@@ -107,7 +109,7 @@ This is perhaps the most interesting architectural decision. OpenFGA stores its 
 
 ### Why this matters
 
-When MAAS needs to update permissions — for example, when adding a user to a group or granting an entitlement — it needs to ensure atomicity: either both the MAAS state and the OpenFGA state are updated, or neither is.
+When MAAS needs to update permissions, for example, when adding a user to a group or granting an entitlement, it needs to ensure atomicity: either both the MAAS state and the OpenFGA state are updated, or neither is.
 
 If OpenFGA were running as a completely separate service with its own database, we would face the classic **two-phase commit (2PC) problem**: coordinating a distributed transaction across two different databases. 2PC is notoriously complex, slow, and fragile in practice.
 
@@ -130,7 +132,7 @@ This eliminates the need for 2PC entirely, the need for compensating transaction
 ### How reads and writes flow
 
 - **Permission checks** (reads) go through the OpenFGA HTTP client over a Unix socket. The `maas-openfga` process handles the evaluation of the authorization model (including relationship expansion, inheritance rules, etc.).
-- **Permission mutations** (writes) — such as adding a user to a group or granting an entitlement — are written **directly to the `openfga.tuple` table** by MAAS Python code, bypassing the OpenFGA API for writes. This is what enables single-transaction atomicity.
+- **Permission mutations** (writes) such as adding a user to a group or granting an entitlement are written **directly to the `openfga.tuple` table** by MAAS Python code, bypassing the OpenFGA API for writes. This is what enables single-transaction atomicity.
 
 ```
                   ┌────────────┐
@@ -282,38 +284,6 @@ maas $PROFILE user-group remove-entitlement $GROUP_ID \
 # Remove a user from a group
 maas $PROFILE user-group remove-member $GROUP_ID username=alice
 ```
-
-## Implementation Timeline
-
-The ReBAC feature was built incrementally over roughly a month. Here is a summary of the commits:
-
-| Date | Description |
-|------|-------------|
-| Feb 16 | **OpenFGA infrastructure** — Embedded OpenFGA server (Go binary) listening on a Unix socket, two migrator binaries (`maas-openfga-migrator` and `maas-openfga-app-migrator`), service layer for tuple management, HTTP client for permission checks. |
-| Feb 24 | **Build tooling** — Added `.gitignore` and updated Makefile for the `maasopenfga` Go module. |
-| Feb 27 | **Replace built-in permission layer (v2)** — Introduced sync/async OpenFGA clients with context caching, migrated existing users to default groups, added `check_permission` decorator, signal handlers for automatic tuple management on user/resource pool changes. |
-| Mar 3 | **Embed OpenFGA migrations** — Fixed migration embedding for Go binaries. |
-| Mar 3 | **User groups endpoints (v2 + v3)** — CRUD for user groups, cascade delete of OpenFGA tuples, `maasserver_usergroup` table with default groups, Alembic migration. |
-| Mar 4 | **Group membership endpoints** — SQL view joining `openfga.tuple` with `auth_user`, v2/v3 endpoints for managing group members. |
-| Mar 5 | **Entitlement endpoints (POST/DELETE)** — v2/v3 endpoints to add/remove entitlements, `EntitlementsBuilderFactory` for validation. |
-| Mar 6 | **Entitlement endpoints (GET)** — List entitlements for a group in both v2 and v3. |
-| Mar 16 | **Replace v3 permission layer** — Fully switched the v3 API (FastAPI) to use OpenFGA for all permission checks. |
-| Mar 17 | **Documentation** — Added ReBAC docs to the MAAS documentation. |
-| Mar 18 | **Bug fix** — Handle edge case where default user groups are deleted. |
-
-## Key Takeaways
-
-1. **Embedding OpenFGA removes operational complexity.** No separate authorization service to deploy, monitor, or scale. It runs as a lightweight Go process on every region controller.
-
-2. **Same database, different schema** is the key trick. It gives us single-transaction atomicity for permission changes without distributed coordination.
-
-3. **Direct writes to OpenFGA tables** bypass the two-phase commit problem entirely. Permission mutations and MAAS data mutations are committed in a single PostgreSQL transaction.
-
-4. **Unix socket communication** keeps permission checks fast and local. No network hops, no TLS overhead for authorization queries.
-
-5. **Backward compatibility** is preserved through default groups and automatic user migration. Existing deployments upgrade seamlessly.
-
-6. **The model is extensible.** Teams can create custom groups with fine-grained, per-pool permissions — something that was simply not possible with the old role-based system.
 
 ---
 
